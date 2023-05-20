@@ -1,4 +1,5 @@
-# TaxiXpress
+# TaxiXpress 
+Lien [https://github.com/ousmane-hamadou/taxi-xpress](https://github.com/ousmane-hamadou/taxi-xpress)
 
 
 
@@ -11,10 +12,10 @@ Pour ce projet, il s'agit de développer une application de réservation et/ou a
 ## Fonctionnalités développées dans l'application web
 
 Les fonctionnalités développées dans cette application sont les suivantes :
-- Connexion des utilisateurs( Propriétaire de Taxis );
-- Recherche et sélection des horaires de départ;
-- Réservation et/ou achat de place en ligne;
-- Paiement en ligne sécurisé.
+- [ ] Connexion des utilisateurs( Propriétaire de Taxis );
+- [x] Recherche et sélection des horaires de départ;
+- [ ] Réservation et/ou achat de place en ligne;
+- [ ] Paiement en ligne sécurisé.
 
 
 
