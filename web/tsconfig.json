@@ -28,7 +28,7 @@
     "**/*.ts",
     "**/*.tsx",
     ".next/types/**/*.ts",
-    "app/lib/constants.ts"
+    "libs/constants.ts"
   ],
   "exclude": ["node_modules"]
 }

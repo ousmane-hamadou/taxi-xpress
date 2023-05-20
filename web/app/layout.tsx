@@ -1,35 +1,19 @@
-import Link from "next/link";
-import NavBar from "./components/NavBar";
-import "./pico.min.css";
-import "./globals.css";
+"use client";
 
-export const metadata = {
-  title: "TaxiXpress",
-  description: "Taxi bookings app",
-};
+import { prefetchStations } from "./page";
+import Provider from "./provider";
 
-function NavActions() {
-  return (
-    <ul>
-      <li>
-        <Link href="/signin" key="signin">
-          Sign In
-        </Link>
-      </li>
-    </ul>
-  );
-}
+prefetchStations();
 
-export default function RootLayout({
+export default function RootLoyout({
   children,
 }: {
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
-      <body>
-        <NavBar logo={<strong>TaxiXpress</strong>} actions={<NavActions />} />
-        {children}
+    <html>
+      <body style={{ margin: 0 }}>
+        <Provider>{children}</Provider>
       </body>
     </html>
   );

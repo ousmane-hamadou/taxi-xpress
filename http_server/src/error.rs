@@ -2,31 +2,45 @@ use log::error;
 use rocket::http::{ContentType, Status};
 use rocket::response::Responder;
 use rocket::serde::json::Json;
-use rocket::tokio::task::JoinError;
+use rocket::tokio::task;
 use rocket::{Request, Response};
 use serde::Serialize;
+use serde_json::Error as SerdeJsonError;
 use serde_with::DisplayFromStr;
 use validator;
 use validator::ValidationErrors;
 
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
+    // server error
     #[error("an internal server error occurred")]
     Sqlx(#[from] sqlx::Error),
     #[error("an internal server error occurred")]
     Bcrypt(#[from] bcrypt::BcryptError),
-    #[error("{0}")]
-    InvalidRequest(String),
+    #[error("an internal server error occurred")]
+    JsonParser(#[from] SerdeJsonError),
+    #[error("an internal server error occurred")]
+    JoinError(#[from] task::JoinError),
+    #[error("an internal server error occurred")]
+    ServerError,
+
+    // resource not found
+    #[error("unknown search id `{0}`")]
+    UnknownSearch(String),
     #[error("{0}")]
     NotFound(String),
+
+    // not processable request
     #[error("validation error")]
     ValidationError(#[from] ValidationErrors),
+    #[error("number `{0}` or password is incorrect")]
+    InvalidCredentials(String),
+    #[error("invalid value `{0}` for `act` property")]
+    InvalidAccountAction(String),
+
+    // authn/auth error
     #[error("You must be authenticated")]
     NoCredentials,
-    #[error("number or password is incorrect")]
-    SignIncorrectData,
-    #[error("an internal server error occurred")]
-    InternalJoinError(#[from] JoinError),
 }
 
 impl<'r> Responder<'r, 'static> for Error {
@@ -65,14 +79,16 @@ impl<'r> Responder<'r, 'static> for Error {
 impl Error {
     fn status_code(&self) -> Status {
         match self {
-            Error::Sqlx(_) | Error::Bcrypt(_) | Error::InternalJoinError(_) => {
-                Status::InternalServerError
-            }
-            Error::SignIncorrectData | Error::ValidationError(_) | Error::InvalidRequest(_) => {
-                Status::BadRequest
-            }
+            Error::Sqlx(_)
+            | Error::Bcrypt(_)
+            | Error::JoinError(_)
+            | Error::JsonParser(_)
+            | Error::ServerError => Status::InternalServerError,
+            Error::InvalidCredentials(_)
+            | Error::ValidationError(_)
+            | Error::InvalidAccountAction(_) => Status::BadRequest,
             Error::NoCredentials => Status::Unauthorized,
-            Error::NotFound(_) => Status::NotFound,
+            Error::NotFound(_) | Error::UnknownSearch(_) => Status::NotFound,
         }
     }
 }

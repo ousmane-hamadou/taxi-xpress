@@ -1,15 +1,36 @@
-import SearchForm from "./components/SeachForm";
-import styles from "./styles.module.css";
+"use client";
+
+import Logo from "@/components/Logo";
+import FormHeader from "@/components/home/FormHeader";
+import HomeLayout from "@/components/home/Layout";
+import Search from "@/components/home/Search";
+import SearchForm from "@/components/home/SearchForm";
+import TopBar from "@/components/TopBar";
+import { STATIONS_API_URL } from "@/libs/constants";
+
+export function prefetchStations() {
+  void listStation();
+}
+
+async function listStation() {
+  const res = await fetch(STATIONS_API_URL);
+
+  return (await res.json())["stations"] as { id: string; name: string }[];
+}
 
 export default async function Home() {
-  return (
-    <main className="container">
-      <div className={styles.page}>
-        <p className={styles.question}>Ou voulez-vous allez?</p>
+  const stations = await listStation();
+  const options = stations.map(({ id, name }) => ({ id, label: name }));
 
-        {/*@ts-expect-error Asycn Component */}
-        <SearchForm />
-      </div>
-    </main>
+  return (
+    <HomeLayout
+      topBar={<TopBar logo={<Logo />} />}
+      searchForm={
+        <Search
+          header={<FormHeader />}
+          sForm={<SearchForm stations={options} />}
+        />
+      }
+    />
   );
 }

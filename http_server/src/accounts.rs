@@ -11,7 +11,8 @@ use validator::Validate;
 use crate::data::taxi_dao;
 use crate::data::user_account_dao;
 use crate::error::Error;
-use crate::{password, XpressDB, BASE_URL};
+use crate::utils::password;
+use crate::{XpressDB, BASE_URL};
 
 const AUTH_COOKIE: &'static str = "AUTH_COOKIE";
 
@@ -89,37 +90,6 @@ struct AccountLinks<'r> {
     sign_in: HashMap<&'r str, String>,
 }
 
-#[get("/accounts")]
-fn index() -> Json<AccountLinks<'static>> {
-    let mut links: HashMap<&'static str, String> = HashMap::new();
-    links.insert("user", uri!(BASE_URL, user_sign_in()).to_string());
-
-    Json(AccountLinks { sign_in: links })
-}
-
-#[post("/accounts/sign-in", data = "<data>")]
-async fn user_sign_in(
-    mut conn: Connection<XpressDB>,
-    cookies: &CookieJar<'_>,
-    data: Json<UserData<'_>>,
-) -> Result<Json<User>, Error> {
-    data.validate()?;
-
-    match user_account_dao::from_number(&mut conn, &data.number.to_lowercase()).await? {
-        None => Err(Error::SignIncorrectData),
-        Some(user) => {
-            if password::verify(data.password, &user.password).await? {
-                let cookie = Cookie::new(AUTH_COOKIE, user.id.to_string());
-                cookies.add_private(cookie);
-
-                return Ok(Json::from(user));
-            }
-
-            return Err(Error::SignIncorrectData);
-        }
-    }
-}
-
 #[post("/accounts/admin/create-user", data = "<data>")]
 async fn create_user(mut conn: Connection<XpressDB>, data: Json<NewUser>) -> Result<Status, Error> {
     let password = password::gen_password().await?;
@@ -132,5 +102,5 @@ async fn create_user(mut conn: Connection<XpressDB>, data: Json<NewUser>) -> Res
 }
 
 pub fn routes() -> Vec<Route> {
-    routes![user_sign_in, create_user, index]
+    routes![create_user]
 }
