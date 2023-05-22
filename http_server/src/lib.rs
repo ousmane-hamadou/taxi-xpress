@@ -1,10 +1,10 @@
-use std::path::PathBuf;
+use crate::error::Error;
 use rocket::fairing::{Fairing, Info, Kind};
 use rocket::http::uri::Absolute;
 use rocket::http::{Header, Status};
-use rocket::{uri, Build, Request, Response, Rocket, options, routes};
+use rocket::{options, routes, uri, Build, Request, Response, Rocket};
 use rocket_db_pools::Database;
-use crate::error::Error;
+use std::path::PathBuf;
 
 mod accounts;
 mod controllers;
@@ -16,9 +16,7 @@ mod repo;
 mod utils;
 
 pub const BASE_URL: Absolute<'static> = uri!("http://localhost:8000");
-pub const SEARCH_COOKIE: &'static str = "search-cookie";
 pub const TAXI_OWNER_COOKIE_KEY: &'static str = "taxi-owner";
-pub const MIN_ELAPSED_TIME: i64 = 5; // in minutes
 
 #[derive(Database)]
 #[database("xpress")]
@@ -36,8 +34,8 @@ pub fn server() -> Rocket<Build> {
         .mount("/", routes![for_cors])
 }
 
-#[options("/<p..>")]
-fn for_cors(p: PathBuf)-> Result<(Status, &'static str), Error> {
+#[options("/<_p..>")]
+fn for_cors(_p: PathBuf) -> Result<(Status, &'static str), Error> {
     Ok((Status::Ok, ""))
 }
 pub struct CORS;
@@ -52,12 +50,18 @@ impl Fairing for CORS {
     }
 
     async fn on_response<'r>(&self, _request: &'r Request<'_>, response: &mut Response<'r>) {
-        response.set_header(Header::new("Access-Control-Allow-Origin", "http://localhost:3000"));
+        response.set_header(Header::new(
+            "Access-Control-Allow-Origin",
+            "http://localhost:3000",
+        ));
         response.set_header(Header::new(
             "Access-Control-Allow-Methods",
             "POST, GET, PATCH, OPTIONS",
         ));
-        response.set_header(Header::new("Access-Control-Allow-Headers", "Content-Type, Cookie"));
+        response.set_header(Header::new(
+            "Access-Control-Allow-Headers",
+            "Content-Type, Cookie",
+        ));
         response.set_header(Header::new("Access-Control-Allow-Credentials", "true"));
     }
 }

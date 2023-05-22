@@ -11,17 +11,21 @@ use crate::repo::search_repo;
 use crate::repo::search_repo::SearchRepo;
 
 pub struct Taxi {
-    pub id: Uuid,
+    pub number: String,
     pub available_seats: i32,
     pub rest_time: Time,
+    pub model: String,
+    pub journey_id: Uuid,
 }
 
 impl From<search_repo::Taxi> for Taxi {
     fn from(value: search_repo::Taxi) -> Self {
         Taxi {
-            id: value.id,
+            number: value.number,
             available_seats: value.available_seats as i32,
             rest_time: value.rest_time,
+            model: value.model,
+            journey_id: value.journey_id
         }
     }
 }
@@ -58,6 +62,21 @@ impl Search {
             available_taxis: None,
             usecase,
         }
+    }
+
+    pub async fn has_seats_form_book(&mut self, journey_id: &Uuid, seats_for_book: u8) -> Result<bool, Error> {
+        self.usecase.get_journey_seats(journey_id).await.map_err(|err| {
+            eprintln!("{err:?}");
+            Error::ServerError
+        }).and_then(|seats| {
+            match seats {
+                None => Err(Error::UnknownJourney(journey_id.to_string())),
+                seats =>
+                    Ok(seats.filter(|s| !s.reserved.is_none())
+                        .filter(|d| (d.reserved.unwrap() + seats_for_book as i32) <= d.total)
+                        .is_some())
+            }
+        })
     }
 }
 

@@ -1,4 +1,4 @@
-use rocket::http::{Header, Status};
+use rocket::http::Status;
 use rocket::request::{FromRequest, Outcome};
 use rocket::Request;
 use serde::Deserialize;
@@ -30,7 +30,7 @@ impl<'r> FromRequest<'r> for MiniSearch {
     async fn from_request(request: &'r Request<'_>) -> Outcome<Self, Self::Error> {
         let res = request.param::<Uuid>(1).unwrap().map(|search_id| {
             let id = search_id.to_string();
-            
+
             request
                 .cookies()
                 .get_private(&id)
@@ -46,7 +46,7 @@ impl<'r> FromRequest<'r> for MiniSearch {
                             criteria: ms.criteria,
                             selection: ms.selection,
                         })
-                        .unwrap(),
+                            .unwrap(),
                     )
                 })
         });

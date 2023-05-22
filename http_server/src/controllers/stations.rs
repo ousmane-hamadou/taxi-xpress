@@ -18,7 +18,6 @@ impl Into<Response> for Vec<Station> {
     fn into(self) -> Response {
         Response {
             stations: self,
-            link: format!("{BASE_URL}/stations"),
         }
     }
 }
@@ -35,8 +34,6 @@ impl From<station_dao::Station> for Station {
 #[derive(Serialize)]
 struct Response {
     stations: Vec<Station>,
-    #[serde(rename = "self")]
-    link: String,
 }
 
 #[get("/stations")]

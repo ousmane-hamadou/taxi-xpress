@@ -1,4 +1,4 @@
-import Container from "@mui/material/Container";
+import Box from "@mui/material/Box";
 import Paper from "@mui/material/Paper";
 import Stack from "@mui/material/Stack";
 
@@ -12,7 +12,7 @@ export default function CriteriaLayout({
   arrival: React.ReactNode;
 }) {
   return (
-    <Container maxWidth="xs">
+    <Box minWidth={250} px={3}>
       <Paper variant="outlined">
         <Stack p={2} direction="column">
           {header}
@@ -20,6 +20,6 @@ export default function CriteriaLayout({
           {arrival}
         </Stack>
       </Paper>
-    </Container>
+    </Box>
   );
 }

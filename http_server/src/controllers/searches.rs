@@ -1,9 +1,10 @@
 use std::collections::HashMap;
 
-use rocket::http::{ContentType, Cookie, CookieJar, Header};
+use rocket::http::{Cookie, CookieJar, Header, Status};
 use rocket::serde::json::Json;
 use rocket::serde::Deserialize;
-use rocket::{get, post, routes, uri, Route, Response, Responder};
+use rocket::{get, post, routes, uri, Responder, Route};
+use rocket::response::status;
 use serde::Serialize;
 use serde_with::skip_serializing_none;
 use time::Time;
@@ -130,7 +131,6 @@ impl<'r> Into<SearchResource> for Search {
     }
 }
 
-#[skip_serializing_none]
 #[derive(Serialize)]
 struct SearchResource {
     id: Uuid,
@@ -139,21 +139,31 @@ struct SearchResource {
     links: HashMap<&'static str, Link>,
 }
 
+#[derive(Responder)]
+struct PerformSearchResponse<'r> {
+    inner: Json<SearchResource>,
+    header: Header<'r>,
+}
+
 // taxis
 
 #[derive(Serialize)]
 struct Taxi {
-    pub id: Uuid,
-    pub available_seats: u8,
-    pub departure_time: Time,
+    number: String,
+    available_seats: u8,
+    departure_time: Time,
+    model: String,
+    journey_id: Uuid
 }
 
 impl From<&search::Taxi> for Taxi {
     fn from(value: &search::Taxi) -> Self {
         Taxi {
-            id: value.id,
+            number: value.number.to_uppercase(),
             available_seats: value.available_seats as u8,
             departure_time: value.rest_time,
+            model: value.model.clone(),
+            journey_id: value.journey_id
         }
     }
 }
@@ -165,24 +175,33 @@ struct TaxiResource {
     links: HashMap<&'static str, Link>,
 }
 
-// controllers
-#[derive(Responder)]
-struct PerformSearchResponse<'r> {
-    inner: Json<SearchResource>,
-    header: Header<'r>,
+// seats
+
+#[derive(Validate, Deserialize)]
+struct Seats {
+    #[validate(range(min=1))]
+    number: u8
 }
+
+// controllers
 
 #[post("/searches", format = "application/json", data = "<criteria>")]
 async fn perform_search(
     criteria: Json<Criteria>,
     cookies: &CookieJar<'_>,
-) -> Result<PerformSearchResponse<'static>, Error> {
+) -> Result<(Status, PerformSearchResponse<'static>), Error> {
     criteria.validate()?;
 
     let s = Search::new(Uuid::new_v4(), criteria.0.into(), None);
 
     cookies.add_private((&s).into());
-    Ok(PerformSearchResponse{inner: Json(s.into()), header: Header::new("Access-Control-Expose-Headers", "Set-Cookie")})
+    Ok((
+        Status::Created,
+        PerformSearchResponse {
+            inner: Json(s.into()),
+            header: Header::new("Access-Control-Expose-Headers", "Set-Cookie"),
+        },
+    ))
 }
 
 #[get("/searches/<_id>")]
@@ -216,6 +235,39 @@ async fn taxis_from_search(
             }))
         })
         .ok_or_else(|| Error::ServerError)
+}
+
+#[post("/searches/<_id>/taxis/<taxi_id>/journey/<journey_id>/select", data="<seats>")]
+async fn select_taxis(
+    _id: Uuid,
+    taxi_id: Uuid,
+    seats: Json<Seats>,
+    mut mini_search: MiniSearch,
+    journey_id: Uuid,
+    search_domain: Result<SearchDomain, Error>,
+    cookies: &CookieJar<'_>
+) -> Result<(Status, PerformSearchResponse<'static>), Error> {
+    seats.validate()?;
+    let mut search_domain = search_domain?;
+
+    match search_domain.has_seats_form_book(&journey_id, seats.number).await? {
+        false => Err(Error::NoMoreSeats),
+        _ => {
+            mini_search.selection = Some(taxi_id);
+
+            let s = Search::from(mini_search);
+
+            cookies.add_private((&s).into());
+
+            Ok((
+                Status::Created,
+                PerformSearchResponse {
+                    inner: Json(s.into()),
+                    header: Header::new("Access-Control-Expose-Headers", "Set-Cookie"),
+                },
+            ))
+        }
+    }
 }
 
 #[get("/searches/<id>/selection")]
@@ -262,6 +314,7 @@ pub fn routes() -> Vec<Route> {
         perform_search,
         retrieve_search,
         retrieve_selection,
-        taxis_from_search
+        taxis_from_search,
+        select_taxis
     ]
 }

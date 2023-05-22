@@ -29,6 +29,8 @@ pub enum Error {
     UnknownSearch(String),
     #[error("{0}")]
     NotFound(String),
+    #[error("unknown journey id `{0}`")]
+    UnknownJourney(String),
 
     // not processable request
     #[error("validation error")]
@@ -37,6 +39,8 @@ pub enum Error {
     InvalidCredentials(String),
     #[error("invalid value `{0}` for `act` property")]
     InvalidAccountAction(String),
+    #[error("there is no more seats")]
+    NoMoreSeats,
 
     // authn/auth error
     #[error("You must be authenticated")]
@@ -86,9 +90,10 @@ impl Error {
             | Error::ServerError => Status::InternalServerError,
             Error::InvalidCredentials(_)
             | Error::ValidationError(_)
-            | Error::InvalidAccountAction(_) => Status::BadRequest,
+            | Error::InvalidAccountAction(_)
+            | Error::NoMoreSeats => Status::BadRequest,
             Error::NoCredentials => Status::Unauthorized,
-            Error::NotFound(_) | Error::UnknownSearch(_) => Status::NotFound,
+            Error::NotFound(_) | Error::UnknownSearch(_) | Error::UnknownJourney(_) => Status::NotFound,
         }
     }
 }
